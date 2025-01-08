@@ -79,8 +79,6 @@ public class Ex2Sheet implements Sheet {
     public void eval() {
         evaluatedCells.clear(); // Réinitialiser les cellules évaluées
 
-        int[][] dd = depth(); // Calcule les niveaux de dépendance
-
         for (int x = 0; x < width(); x++) {
             for (int y = 0; y < height(); y++) {
                 if (table[x][y].getType() == Ex2Utils.FORM) {
@@ -101,7 +99,7 @@ public class Ex2Sheet implements Sheet {
         for (int x = 0; x < width(); x++) {
             for (int y = 0; y < height(); y++) {
                 if (table[x][y].getType() == Ex2Utils.FORM) {
-                    ans[x][y] = calculateDepth(x, y);
+                    ans[x][y] = calculateDepth(x, y, new HashSet<>());
                 }
             }
         }
@@ -144,119 +142,174 @@ public class Ex2Sheet implements Sheet {
         Cell c = get(x, y);
         if (c.getType() == Ex2Utils.FORM) {
             try {
-                // Évaluer la formule
-                return evaluateFormula(c.getData());
+                return evaluateFormula(c.getData(), new HashSet<>());
             } catch (ArithmeticException e) {
-                c.setType(Ex2Utils.ERR_FORM_FORMAT);  // Division par zéro ou erreur dans la formule
-                return Ex2Utils.ERR_FORM;  // Message d'erreur standard
+                c.setType(Ex2Utils.ERR_FORM_FORMAT);
+                return Ex2Utils.ERR_FORM;
             } catch (IllegalArgumentException e) {
-                c.setType(Ex2Utils.ERR_CYCLE_FORM);  // Référence circulaire
-                return Ex2Utils.ERR_CYCLE;  // Message d'erreur de cycle
+                c.setType(Ex2Utils.ERR_CYCLE_FORM);
+                return Ex2Utils.ERR_CYCLE;
             } catch (Exception e) {
-                c.setType(Ex2Utils.ERR_FORM_FORMAT);  // Autres erreurs
+                c.setType(Ex2Utils.ERR_FORM_FORMAT);
                 return Ex2Utils.ERR_FORM;
             }
         }
         return c.toString();
     }
 
+    private String evaluateFormula(String formula, Set<String> visitedCells) {
+        if (visitedCells.contains(formula)) {
+            return Ex2Utils.ERR_CYCLE; // Référence circulaire détectée
+        }
+        visitedCells.add(formula);
 
-    // Fonction modifiée pour évaluer une formule
-    private String evaluateFormula(String formula) {
         if (formula == null || !formula.startsWith("=")) {
-            return Ex2Utils.ERR_FORM; // Format invalide
+            return Ex2Utils.ERR_FORM;
         }
 
-        String expression = formula.substring(1).trim(); // Enlève '=' et espaces inutiles
-        System.out.println("Evaluating formula: " + expression);
-
+        String expression = formula.substring(1).trim();
         try {
-            // Vérifie si l'expression est une expression mathématique simple
-            if (expression.matches("[0-9.+\\-*/\\s]+")) {
-                System.out.println("Recognized as a simple math expression");
-                return String.valueOf(evaluateMathExpression(expression));  // Utilise evaluateMathExpression pour les calculs simples
+            if (expression.matches(".*[()]+.*")) {
+                return String.valueOf(evaluateExpressionWithParentheses(expression));
             }
 
-            System.out.println("Recognized as a formula with references");
-            // Si l'expression contient des références comme A1 ou B2
-            String[] parts = expression.split("\\+|\\-|\\*|\\/"); // Sépare en opérandes
-            char operator = expression.contains("+") ? '+' :
-                    expression.contains("-") ? '-' :
-                            expression.contains("*") ? '*' : '/';
+            String[] tokens = expression.split("(?=[+\\-*/])|(?<=[+\\-*/])");
+            Stack<Double> values = new Stack<>();
+            Stack<Character> operators = new Stack<>();
 
-            // Résout les références (par exemple "A1" -> valeur de la cellule)
-            double val1 = getValueFromReference(parts[0].trim());
-            double val2 = getValueFromReference(parts[1].trim());
+            for (String token : tokens) {
+                token = token.trim();
+                if ("+-*/".contains(token)) {
+                    operators.push(token.charAt(0));
+                } else if (token.matches("^[A-Z]+[0-9]+$")) {
+                    values.push(getValueFromReference(token));
+                } else {
+                    values.push(Double.parseDouble(token));
+                }
+            }
 
-            // Effectue le calcul
-            return switch (operator) {
-                case '+' -> String.valueOf(val1 + val2);
-                case '-' -> String.valueOf(val1 - val2);
-                case '*' -> String.valueOf(val1 * val2);
-                case '/' -> val2 != 0 ? String.valueOf(val1 / val2) : Ex2Utils.ERR_FORM;
-                default -> Ex2Utils.ERR_FORM;
-            };
+            while (!operators.isEmpty()) {
+                double b = values.pop();
+                double a = values.pop();
+                char op = operators.pop();
+                values.push(applyOperator(op, a, b));
+            }
+            return String.valueOf(values.pop());
         } catch (Exception e) {
-            System.out.println("Error while evaluating: " + e.getMessage());
-            return Ex2Utils.ERR_FORM; // Retourne une erreur si la formule est invalide
+            return Ex2Utils.ERR_FORM;
         }
     }
 
-    // Fonction d'évaluation des expressions mathématiques simples
-    private double evaluateMathExpression(String expression) throws Exception {
-        // Remplacer les espaces pour faciliter l'évaluation
-        expression = expression.replaceAll("\\s+", "");
+    private double evaluateExpressionWithParentheses(String expression) {
+        return new Object() {
+            int pos = -1, ch;
 
-        // Gestion des opérations simples
-        if (expression.contains("+")) {
-            String[] operands = expression.split("\\+");
-            return Double.parseDouble(operands[0]) + Double.parseDouble(operands[1]);
-        }
-        if (expression.contains("-")) {
-            String[] operands = expression.split("-");
-            return Double.parseDouble(operands[0]) - Double.parseDouble(operands[1]);
-        }
-        if (expression.contains("*")) {
-            String[] operands = expression.split("\\*");
-            return Double.parseDouble(operands[0]) * Double.parseDouble(operands[1]);
-        }
-        if (expression.contains("/")) {
-            String[] operands = expression.split("/");
-            if (Double.parseDouble(operands[1]) == 0) {
-                throw new ArithmeticException("Division by zero");
+            void nextChar() {
+                ch = (++pos < expression.length()) ? expression.charAt(pos) : -1;
             }
-            return Double.parseDouble(operands[0]) / Double.parseDouble(operands[1]);
-        }
 
-        // Si aucune opération, retourner la valeur directe
-        return Double.parseDouble(expression);
+            boolean eat(int charToEat) {
+                while (ch == ' ') nextChar();
+                if (ch == charToEat) {
+                    nextChar();
+                    return true;
+                }
+                return false;
+            }
+
+            double parse() {
+                nextChar();
+                double x = parseExpression();
+                if (pos < expression.length()) throw new RuntimeException("Unexpected: " + (char) ch);
+                return x;
+            }
+
+            double parseExpression() {
+                double x = parseTerm();
+                for (; ; ) {
+                    if (eat('+')) x += parseTerm();
+                    else if (eat('-')) x -= parseTerm();
+                    else return x;
+                }
+            }
+
+            double parseTerm() {
+                double x = parseFactor();
+                for (; ; ) {
+                    if (eat('*')) x *= parseFactor();
+                    else if (eat('/')) x /= parseFactor();
+                    else return x;
+                }
+            }
+
+            double parseFactor() {
+                if (eat('+')) return parseFactor();
+                if (eat('-')) return -parseFactor();
+
+                double x;
+                int startPos = this.pos;
+                if (eat('(')) {
+                    x = parseExpression();
+                    eat(')');
+                } else if ((ch >= '0' && ch <= '9') || ch == '.') {
+                    while ((ch >= '0' && ch <= '9') || ch == '.') nextChar();
+                    x = Double.parseDouble(expression.substring(startPos, this.pos));
+                } else if (ch >= 'A' && ch <= 'Z') {
+                    while (ch >= 'A' && ch <= 'Z') nextChar();
+                    x = getValueFromReference(expression.substring(startPos, this.pos));
+                } else {
+                    throw new RuntimeException("Unexpected: " + (char) ch);
+                }
+
+                return x;
+            }
+        }.parse();
     }
 
-    // Résout les références aux cellules comme "A1"
+    private double applyOperator(char op, double a, double b) {
+        return switch (op) {
+            case '+' -> a + b;
+            case '-' -> a - b;
+            case '*' -> a * b;
+            case '/' -> {
+                if (b == 0) throw new ArithmeticException("Division by zero");
+                yield a / b;
+            }
+            default -> throw new IllegalArgumentException("Unknown operator");
+        };
+    }
+
     private double getValueFromReference(String ref) {
         Cell cell = get(ref);
         if (cell == null || cell.getType() == Ex2Utils.ERR_FORM_FORMAT) {
             throw new IllegalArgumentException("Invalid reference: " + ref);
         }
-        return Double.parseDouble(cell.getData());
+        try {
+            return Double.parseDouble(cell.getData());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Non-numeric reference: " + ref);
+        }
     }
 
-    // Calcul de la profondeur des dépendances pour une formule
-    private int calculateDepth(int x, int y) {
-        Stack<Cell> stack = new Stack<>();
-        stack.push(get(x, y));
-        int depth = 0;
+    private int calculateDepth(int x, int y, Set<String> visited) {
+        String cellRef = (char) ('A' + x) + String.valueOf(y);
+        if (visited.contains(cellRef)) return Ex2Utils.ERR;
+        visited.add(cellRef);
 
-        while (!stack.isEmpty()) {
-            Cell current = stack.pop();
-            if (current.getType() == Ex2Utils.FORM) {
-                // Ajout de la logique pour calculer les dépendances
-                // Cette logique peut impliquer la vérification des références
-                // Si la cellule dépend d'une autre cellule, il faut l'ajouter à la pile
+        Cell c = get(x, y);
+        if (c.getType() != Ex2Utils.FORM) return 0;
+
+        String formula = c.getData().substring(1).trim();
+        int maxDepth = 0;
+
+        for (String token : formula.split("[^A-Za-z0-9]") ) {
+            if (token.matches("[A-Z]+[0-9]+")) {
+                Cell refCell = get(token);
+                if (refCell != null) {
+                    maxDepth = Math.max(maxDepth, calculateDepth(token.charAt(0) - 'A', Integer.parseInt(token.substring(1)), visited));
+                }
             }
-            depth++;
         }
-
-        return depth;
+        return 1 + maxDepth;
     }
 }

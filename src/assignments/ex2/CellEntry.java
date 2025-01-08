@@ -28,7 +28,7 @@ public class CellEntry implements Index2D {
 
     @Override
     public String toString() {
-        // Retourne la référence de la cellule (ex: "B3")
-        return Ex2Utils.ABC[x] + (Ex2Utils.HEIGHT - y);  // Le format de cellule "B3"
+
+        return Ex2Utils.ABC[x] + y;  // Affiche par exemple "A1" au lieu de "A16"
     }
 }
