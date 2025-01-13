@@ -4,98 +4,94 @@ import java.io.*;
 import java.util.*;
 
 public class Ex2Sheet implements Sheet {
-    private Cell[][] table; // La grille des cellules
-    private Set<String> evaluatedCells = new HashSet<>(); // Ensemble pour suivre les cellules déjà évaluées
+    private Cell[][] table; // The grid of cells
+    private Set<String> evaluatedCells = new HashSet<>(); // Tracks already evaluated cells
 
-    // Constructeur initialisant la feuille avec les dimensions données
+    // Constructor to initialize the sheet with given dimensions
     public Ex2Sheet(int x, int y) {
         table = new SCell[x][y];
         for (int i = 0; i < x; i++) {
             for (int j = 0; j < y; j++) {
-                table[i][j] = new SCell(Ex2Utils.EMPTY_CELL);
+                table[i][j] = new SCell(Ex2Utils.EMPTY_CELL); // Initialize cells as empty
             }
         }
-        eval(); // Évalue toutes les formules dans la feuille lors de l'initialisation
+        eval(); // Evaluate all formulas on initialization
     }
 
-    // Constructeur par défaut avec des dimensions prédéfinies
+    // Default constructor with predefined dimensions
     public Ex2Sheet() {
         this(Ex2Utils.WIDTH, Ex2Utils.HEIGHT);
     }
 
     @Override
     public String value(int x, int y) {
-        if (!isIn(x, y)) return Ex2Utils.EMPTY_CELL;
+        if (!isIn(x, y)) return Ex2Utils.EMPTY_CELL; // Return empty if out of bounds
 
         Cell c = get(x, y);
         if (c.getType() == Ex2Utils.FORM) {
-            return eval(x, y); // Évalue la formule si nécessaire
+            return eval(x, y); // Evaluate formula
         } else if (c.getType() == Ex2Utils.ERR_FORM_FORMAT) {
-            return Ex2Utils.ERR_FORM; // Renvoie un message d'erreur pour une formule invalide
+            return Ex2Utils.ERR_FORM; // Invalid formula error
         } else if (c.getType() == Ex2Utils.ERR_CYCLE_FORM) {
-            return Ex2Utils.ERR_CYCLE; // Renvoie un message d'erreur pour une référence circulaire
+            return Ex2Utils.ERR_CYCLE; // Circular reference error
         }
-        return c.toString(); // Sinon, renvoie la valeur brute de la cellule
+        return c.toString(); // Return raw cell value
     }
-
 
     @Override
     public Cell get(int x, int y) {
         if (isIn(x, y)) {
             return table[x][y];
         }
-        return null;
+        return null; // Return null if out of bounds
     }
 
     @Override
     public Cell get(String cords) {
         if (cords == null || cords.length() < 2) return null;
 
-        // Convertir la lettre de colonne en majuscule pour insensibilité à la casse
-        char col = Character.toUpperCase(cords.charAt(0));
-        int row;
+        // Convert column letter to uppercase for case-insensitivity
+        cords = cords.toUpperCase();
 
+        char col = cords.charAt(0);
+        int row;
         try {
-            row = Integer.parseInt(cords.substring(1)); // Extraire l'indice de ligne
+            row = Integer.parseInt(cords.substring(1)); // Extract the row index
         } catch (NumberFormatException e) {
-            return null; // Retourne null si la référence est invalide
+            return null; // Invalid format
         }
 
-        int x = col - 'A'; // Convertir la lettre de colonne en indice
+        int x = col - 'A'; // Convert column letter to index
         int y = row;
 
-        return get(x, y); // Appeler la méthode qui utilise les coordonnées numériques
+        return get(x, y); // Call the numeric coordinates version
     }
-
-
-
-
 
     @Override
     public int width() {
-        return table.length;
+        return table.length; // Return the number of columns
     }
 
     @Override
     public int height() {
-        return table[0].length;
+        return table[0].length; // Return the number of rows
     }
 
     @Override
     public void set(int x, int y, String s) {
         if (isIn(x, y)) {
-            table[x][y] = new SCell(s); // Met à jour la cellule avec la nouvelle valeur
+            table[x][y] = new SCell(s); // Update the cell with the new value
         }
     }
 
     @Override
     public void eval() {
-        evaluatedCells.clear(); // Réinitialiser les cellules évaluées
+        evaluatedCells.clear(); // Reset the set of evaluated cells
 
         for (int x = 0; x < width(); x++) {
             for (int y = 0; y < height(); y++) {
                 if (table[x][y].getType() == Ex2Utils.FORM) {
-                    eval(x, y); // Évalue chaque formule
+                    eval(x, y); // Evaluate formulas
                 }
             }
         }
@@ -103,6 +99,7 @@ public class Ex2Sheet implements Sheet {
 
     @Override
     public boolean isIn(int xx, int yy) {
+        // Check if coordinates are within the sheet bounds
         return xx >= 0 && yy >= 0 && xx < width() && yy < height();
     }
 
@@ -112,7 +109,7 @@ public class Ex2Sheet implements Sheet {
         for (int x = 0; x < width(); x++) {
             for (int y = 0; y < height(); y++) {
                 if (table[x][y].getType() == Ex2Utils.FORM) {
-                    ans[x][y] = calculateDepth(x, y, new HashSet<>());
+                    ans[x][y] = calculateDepth(x, y, new HashSet<>()); // Calculate formula depth
                 }
             }
         }
@@ -127,12 +124,12 @@ public class Ex2Sheet implements Sheet {
         while ((line = reader.readLine()) != null && y < height()) {
             String[] cells = line.split(",");
             for (int x = 0; x < cells.length && x < width(); x++) {
-                set(x, y, cells[x]);
+                set(x, y, cells[x]); // Populate cells with loaded data
             }
             y++;
         }
         reader.close();
-        eval(); // Réévalue les formules après le chargement
+        eval(); // Re-evaluate formulas after loading
     }
 
     @Override
@@ -140,8 +137,8 @@ public class Ex2Sheet implements Sheet {
         BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
         for (int y = 0; y < height(); y++) {
             for (int x = 0; x < width(); x++) {
-                writer.write(value(x, y));
-                if (x < width() - 1) writer.write(",");
+                writer.write(value(x, y)); // Write cell value
+                if (x < width() - 1) writer.write(","); // Separate values with commas
             }
             writer.newLine();
         }
@@ -156,31 +153,29 @@ public class Ex2Sheet implements Sheet {
         if (c.getType() == Ex2Utils.FORM) {
             try {
                 String result = evaluateFormula(c.getData(), new HashSet<>());
-                return result; // Retourne le résultat sans changer le type de la cellule
+                return result;
             } catch (ArithmeticException e) {
                 c.setType(Ex2Utils.ERR_FORM_FORMAT);
-                return Ex2Utils.ERR_FORM; // Division par zéro ou autre erreur mathématique
+                return Ex2Utils.ERR_FORM; // Division by zero error
             } catch (IllegalArgumentException e) {
                 c.setType(Ex2Utils.ERR_CYCLE_FORM);
-                return Ex2Utils.ERR_CYCLE; // Cellule vide ou référence circulaire
+                return Ex2Utils.ERR_CYCLE; // Circular reference error
             } catch (Exception e) {
                 c.setType(Ex2Utils.ERR_FORM_FORMAT);
-                return Ex2Utils.ERR_FORM; // Autres erreurs de formule
+                return Ex2Utils.ERR_FORM; // Other formula errors
             }
         }
         return c.toString();
     }
 
-
-
     private String evaluateFormula(String formula, Set<String> visitedCells) {
         if (visitedCells.contains(formula)) {
-            return Ex2Utils.ERR_CYCLE; // Référence circulaire détectée
+            return Ex2Utils.ERR_CYCLE; // Circular reference detected
         }
         visitedCells.add(formula);
 
         if (formula == null || !formula.startsWith("=")) {
-            return Ex2Utils.ERR_FORM;
+            return Ex2Utils.ERR_FORM; // Invalid formula
         }
 
         String expression = formula.substring(1).trim();
@@ -200,11 +195,11 @@ public class Ex2Sheet implements Sheet {
             for (String token : tokens) {
                 token = token.trim();
                 if ("+-*/".contains(token)) {
-                    operators.push(token.charAt(0));
+                    operators.push(token.charAt(0)); // Push operator
                 } else if (token.matches("^[A-Z]+[0-9]+$")) {
-                    values.push(getValueFromReference(token));
+                    values.push(getValueFromReference(token)); // Handle cell reference
                 } else {
-                    values.push(Double.parseDouble(token));
+                    values.push(Double.parseDouble(token)); // Parse number
                 }
             }
 
@@ -212,11 +207,11 @@ public class Ex2Sheet implements Sheet {
                 double b = values.pop();
                 double a = values.pop();
                 char op = operators.pop();
-                values.push(applyOperator(op, a, b));
+                values.push(applyOperator(op, a, b)); // Apply operator
             }
             return String.valueOf(values.pop());
         } catch (Exception e) {
-            return Ex2Utils.ERR_FORM;
+            return Ex2Utils.ERR_FORM; // Formula evaluation failed
         }
     }
 
@@ -228,8 +223,8 @@ public class Ex2Sheet implements Sheet {
             if (c == ')') balance--;
             if (balance < 0) return false;
             if ("+-*/".indexOf(c) != -1) {
-                if (i == 0 || i == formula.length() - 1) return false;
-                if ("+-*/".indexOf(formula.charAt(i + 1)) != -1) return false;
+                if (i == 0 || i == formula.length() - 1) return false; // Invalid operator position
+                if ("+-*/".indexOf(formula.charAt(i + 1)) != -1) return false; // Consecutive operators
             }
         }
         return balance == 0;
@@ -261,25 +256,25 @@ public class Ex2Sheet implements Sheet {
 
             double parseExpression() {
                 double x = parseTerm();
-                for (; ; ) {
-                    if (eat('+')) x += parseTerm();
-                    else if (eat('-')) x -= parseTerm();
+                for (;;) {
+                    if (eat('+')) x += parseTerm(); // Addition
+                    else if (eat('-')) x -= parseTerm(); // Subtraction
                     else return x;
                 }
             }
 
             double parseTerm() {
                 double x = parseFactor();
-                for (; ; ) {
-                    if (eat('*')) x *= parseFactor();
-                    else if (eat('/')) x /= parseFactor();
+                for (;;) {
+                    if (eat('*')) x *= parseFactor(); // Multiplication
+                    else if (eat('/')) x /= parseFactor(); // Division
                     else return x;
                 }
             }
 
             double parseFactor() {
-                if (eat('+')) return parseFactor();
-                if (eat('-')) return -parseFactor();
+                if (eat('+')) return parseFactor(); // Unary plus
+                if (eat('-')) return -parseFactor(); // Unary minus
 
                 double x;
                 int startPos = this.pos;
@@ -314,13 +309,15 @@ public class Ex2Sheet implements Sheet {
         };
     }
     private double getValueFromReference(String ref) {
-        ref = ref.toUpperCase(); // Normalisation déjà appliquée ici
-        Cell cell = get(ref);    // Appel à get(String cords)
+        // Normalize reference to uppercase for consistency
+        ref = ref.toUpperCase();
+
+        Cell cell = get(ref);
         if (cell == null) {
             throw new IllegalArgumentException("Invalid reference: " + ref);
         }
 
-        // Si la cellule contient une formule, évaluez-la
+        // If the cell contains a formula, evaluate it
         if (cell.getType() == Ex2Utils.FORM) {
             String value = eval(ref.charAt(0) - 'A', Integer.parseInt(ref.substring(1)));
             try {
@@ -330,15 +327,13 @@ public class Ex2Sheet implements Sheet {
             }
         }
 
-        // Si la cellule contient un nombre, retournez sa valeur
+        // If the cell contains a number, return its value
         try {
             return Double.parseDouble(cell.getData());
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Non-numeric reference: " + ref);
         }
     }
-
-
 
 
     private int calculateDepth(int x, int y, Set<String> visited) {

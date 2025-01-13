@@ -143,7 +143,6 @@ public class Ex2GUI {
      */
     private static void inputCell(int xx, int yy) {
         if (table.isIn(xx, yy)) {
-            // Crée un objet de type CellEntry
             cord = new CellEntry(xx, yy);  // Utilise ta classe CellEntry
 
             Cell cc = table.get(xx, yy);
@@ -155,7 +154,6 @@ public class Ex2GUI {
                 System.out.println(ww);
             }
 
-            // Modification de la cellule si l'utilisateur souhaite
             String c = StdDrawEx2.getCell(cord, cc.getData());
             String s1 = table.get(xx, yy).getData();
             if (c == null) {
