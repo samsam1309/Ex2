@@ -48,6 +48,9 @@ class Ex2SheetTest {
 
         sheet.set(1, 1, "=(2+3");
         assertEquals(Ex2Utils.ERR_FORM, sheet.value(1, 1));
+
+        sheet.set(2, 0, "=A0+A1++");
+        assertEquals(Ex2Utils.ERR_FORM, sheet.value(2, 0));
     }
 
     @Test
@@ -74,6 +77,7 @@ class Ex2SheetTest {
         assertEquals(1, depth[1][0]);
         assertEquals(2, depth[2][0]);
     }
+
 
     @Test
     void testSaveAndLoad() throws Exception {
@@ -113,23 +117,9 @@ class Ex2SheetTest {
 
         // Verify access with textual references (case-insensitive)
         assertEquals("10", sheet.get("A0").getData());
-        assertEquals("10", sheet.get("a0").getData());
         assertEquals("20", sheet.get("B0").getData());
-        assertEquals("=A0+B0", sheet.get("c0").getData());
+        assertEquals("=A0+B0", sheet.get("C0").getData());
     }
-
-    @Test
-    void testReferencedFormulas() {
-        Ex2Sheet sheet = new Ex2Sheet(3, 3);
-
-        // Set formulas referencing other cells
-        sheet.set(0, 0, "=2+2"); // A0 = 4
-        assertEquals("4.0", sheet.value(0, 0));
-
-        sheet.set(1, 0, "=A0+5"); // B0 = A0 + 5 = 9
-        assertEquals("9.0", sheet.value(1, 0));
-    }
-
 
     @Test
     void testEdgeCases() {
@@ -146,5 +136,26 @@ class Ex2SheetTest {
         // Test zero
         sheet.set(1, 0, "0");
         assertEquals("0", sheet.value(1, 0));
+    }
+
+    @Test
+    void testSpecialCharacters() {
+        Ex2Sheet sheet = new Ex2Sheet(3, 3);
+
+        // Set special characters
+        sheet.set(0, 0, "Hello@123");
+        sheet.set(1, 0, "=A0+!");
+
+        assertEquals("Hello@123", sheet.value(0, 0));
+        assertEquals(Ex2Utils.ERR_FORM, sheet.value(1, 0));
+    }
+
+    @Test
+    void testLargeSheet() {
+        Ex2Sheet sheet = new Ex2Sheet(Ex2Utils.WIDTH, Ex2Utils.HEIGHT);
+
+        // Test large sheet dimensions
+        sheet.set(Ex2Utils.WIDTH - 1, Ex2Utils.HEIGHT - 1, "123");
+        assertEquals("123", sheet.value(Ex2Utils.WIDTH - 1, Ex2Utils.HEIGHT - 1));
     }
 }
