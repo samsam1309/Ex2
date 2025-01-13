@@ -1,3 +1,4 @@
+
 package assignments.ex2;
 
 import java.io.*;
@@ -26,12 +27,18 @@ public class Ex2Sheet implements Sheet {
     @Override
     public String value(int x, int y) {
         if (!isIn(x, y)) return Ex2Utils.EMPTY_CELL;
+
         Cell c = get(x, y);
         if (c.getType() == Ex2Utils.FORM) {
             return eval(x, y); // Évalue la formule si nécessaire
+        } else if (c.getType() == Ex2Utils.ERR_FORM_FORMAT) {
+            return Ex2Utils.ERR_FORM; // Renvoie un message d'erreur pour une formule invalide
+        } else if (c.getType() == Ex2Utils.ERR_CYCLE_FORM) {
+            return Ex2Utils.ERR_CYCLE; // Renvoie un message d'erreur pour une référence circulaire
         }
-        return c.toString();
+        return c.toString(); // Sinon, renvoie la valeur brute de la cellule
     }
+
 
     @Override
     public Cell get(int x, int y) {
@@ -142,20 +149,23 @@ public class Ex2Sheet implements Sheet {
         Cell c = get(x, y);
         if (c.getType() == Ex2Utils.FORM) {
             try {
-                return evaluateFormula(c.getData(), new HashSet<>());
+                String result = evaluateFormula(c.getData(), new HashSet<>());
+                c.setType(Ex2Utils.FORM); // Assure que le type reste FORM
+                return result;
             } catch (ArithmeticException e) {
                 c.setType(Ex2Utils.ERR_FORM_FORMAT);
-                return Ex2Utils.ERR_FORM;
+                return Ex2Utils.ERR_FORM; // Division par zéro ou autre erreur mathématique
             } catch (IllegalArgumentException e) {
                 c.setType(Ex2Utils.ERR_CYCLE_FORM);
-                return Ex2Utils.ERR_CYCLE;
+                return Ex2Utils.ERR_CYCLE; // Référence circulaire
             } catch (Exception e) {
                 c.setType(Ex2Utils.ERR_FORM_FORMAT);
-                return Ex2Utils.ERR_FORM;
+                return Ex2Utils.ERR_FORM; // Autres erreurs de formule
             }
         }
         return c.toString();
     }
+
 
     private String evaluateFormula(String formula, Set<String> visitedCells) {
         if (visitedCells.contains(formula)) {
@@ -168,6 +178,10 @@ public class Ex2Sheet implements Sheet {
         }
 
         String expression = formula.substring(1).trim();
+        if (!validateFormula(expression)) {
+            return Ex2Utils.ERR_FORM;
+        }
+
         try {
             if (expression.matches(".*[()]+.*")) {
                 return String.valueOf(evaluateExpressionWithParentheses(expression));
@@ -198,6 +212,21 @@ public class Ex2Sheet implements Sheet {
         } catch (Exception e) {
             return Ex2Utils.ERR_FORM;
         }
+    }
+
+    private boolean validateFormula(String formula) {
+        int balance = 0;
+        for (int i = 0; i < formula.length(); i++) {
+            char c = formula.charAt(i);
+            if (c == '(') balance++;
+            if (c == ')') balance--;
+            if (balance < 0) return false;
+            if ("+-*/".indexOf(c) != -1) {
+                if (i == 0 || i == formula.length() - 1) return false;
+                if ("+-*/".indexOf(formula.charAt(i + 1)) != -1) return false;
+            }
+        }
+        return balance == 0;
     }
 
     private double evaluateExpressionWithParentheses(String expression) {

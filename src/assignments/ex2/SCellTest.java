@@ -1,78 +1,93 @@
 package assignments.ex2;
 
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
 public class SCellTest {
 
-    public static void main(String[] args) {
-        System.out.println("=== Testing SCell ===");
+    @Test
+    public void testSetDataAndGetData() {
+        SCell cell = new SCell("Hello");
+        assertEquals("Hello", cell.getData(), "The data should be 'Hello'");
+        cell.setData("42");
+        assertEquals("42", cell.getData(), "The data should be '42'");
+    }
 
-        // Test 1: Cell with a number
-        System.out.println("\n-- Test 1: Cell with a number --");
-        SCell cell1 = new SCell("123");
-        System.out.println("Data: " + cell1.getData()); // Expected: 123
-        System.out.println("Type: " + cell1.getType()); // Expected: Ex2Utils.NUMBER
+    @Test
+    public void testParseTypeText() {
+        SCell cell = new SCell("Hello");
+        assertEquals(Ex2Utils.TEXT, cell.getType(), "The type should be TEXT for plain text");
+    }
 
-        // Test 2: Cell with a formula
-        System.out.println("\n-- Test 2: Cell with a formula --");
-        SCell cell2 = new SCell("=A1+B2");
-        System.out.println("Data: " + cell2.getData()); // Expected: =A1+B2
-        System.out.println("Type: " + cell2.getType()); // Expected: Ex2Utils.FORM
+    @Test
+    public void testParseTypeNumber() {
+        SCell cell = new SCell("42");
+        assertEquals(Ex2Utils.NUMBER, cell.getType(), "The type should be NUMBER for a valid number");
+    }
 
-        // Test 3: Cell with text
-        System.out.println("\n-- Test 3: Cell with text --");
-        SCell cell3 = new SCell("Hello");
-        System.out.println("Data: " + cell3.getData()); // Expected: Hello
-        System.out.println("Type: " + cell3.getType()); // Expected: Ex2Utils.TEXT
+    @Test
+    public void testParseTypeFormula() {
+        SCell cell = new SCell("=2+3");
+        assertEquals(Ex2Utils.FORM, cell.getType(), "The type should be FORM for a valid formula");
+    }
 
-        // Test 4: Empty cell
-        System.out.println("\n-- Test 4: Empty cell --");
-        SCell cell4 = new SCell("");
-        System.out.println("Data: " + cell4.getData()); // Expected: (empty string)
-        System.out.println("Type: " + cell4.getType()); // Expected: Ex2Utils.TEXT
 
-        // Test 5: Cell with an invalid formula
-        System.out.println("\n-- Test 5: Cell with an invalid formula --");
-        SCell cell5 = new SCell("=A1++B2");
-        System.out.println("Data: " + cell5.getData()); // Expected: =A1++B2
-        System.out.println("Type: " + cell5.getType()); // Expected: Ex2Utils.FORM
+    @Test
+    public void testParseTypeInvalidFormula() {
+        SCell cell = new SCell("=2++2");
+        assertEquals(Ex2Utils.ERR_FORM_FORMAT, cell.getType(), "The type should be ERR_FORM_FORMAT for an invalid formula");
 
-        // Test 6: Update cell content
-        System.out.println("\n-- Test 6: Updating cell content --");
-        SCell cell6 = new SCell("42");
-        System.out.println("Initial Data: " + cell6.getData()); // Expected: 42
-        System.out.println("Initial Type: " + cell6.getType()); // Expected: Ex2Utils.NUMBER
+        cell.setData("=2+");
+        assertEquals(Ex2Utils.ERR_FORM_FORMAT, cell.getType(), "The type should be ERR_FORM_FORMAT for a formula ending with an operator");
 
-        cell6.setData("=B1+C2");
-        System.out.println("Updated Data: " + cell6.getData()); // Expected: =B1+C2
-        System.out.println("Updated Type: " + cell6.getType()); // Expected: Ex2Utils.FORM
+        cell.setData("=2*(3+4");
+        assertEquals(Ex2Utils.ERR_FORM_FORMAT, cell.getType(), "The type should be ERR_FORM_FORMAT for a formula with unbalanced parentheses");
+    }
 
-        cell6.setData("Text");
-        System.out.println("Updated Data: " + cell6.getData()); // Expected: Text
-        System.out.println("Updated Type: " + cell6.getType()); // Expected: Ex2Utils.TEXT
 
-        // Test 7: Cell with a simple formula
-        System.out.println("\n-- Test 7: Cell with a simple formula --");
-        SCell cell7 = new SCell("=1+2*3");
-        System.out.println("Data: " + cell7.getData()); // Expected: =1+2*3
-        System.out.println("Type: " + cell7.getType()); // Expected: Ex2Utils.FORM
 
-        // Test 8: Cell with a complex formula
-        System.out.println("\n-- Test 8: Cell with a complex formula --");
-        SCell cell8 = new SCell("=(1+2)*(3+4)");
-        System.out.println("Data: " + cell8.getData()); // Expected: =(1+2)*(3+4)
-        System.out.println("Type: " + cell8.getType()); // Expected: Ex2Utils.FORM
+    @Test
+    public void testIsNumber() {
+        SCell cell = new SCell("42");
+        assertTrue(cell.isNumber("42"), "42 should be recognized as a valid number");
+        assertFalse(cell.isNumber("Hello"), "Hello should not be recognized as a valid number");
+    }
 
-        // Test 9: Edge cases
-        System.out.println("\n-- Test 9: Edge cases --");
-        SCell cell9 = new SCell("=0/0"); // Division by zero
-        System.out.println("Data: " + cell9.getData()); // Expected: =0/0
-        System.out.println("Type: " + cell9.getType()); // Expected: Ex2Utils.FORM
+    @Test
+    public void testIsForm() {
+        SCell cell = new SCell("=2+3");
+        assertTrue(cell.isForm("=2+3"), "=2+3 should be recognized as a valid formula");
+        assertFalse(cell.isForm("2+3"), "2+3 should not be recognized as a valid formula");
+        assertFalse(cell.isForm("=2++3"), "=2++3 should not be recognized as a valid formula");
+    }
 
-        SCell cell10 = new SCell(null); // Null input
-        System.out.println("Data: " + cell10.getData()); // Expected: null or ""
-        System.out.println("Type: " + cell10.getType()); // Expected: Ex2Utils.TEXT
+    @Test
+    public void testValidateFormula() {
+        SCell cell = new SCell("=2+3");
+        assertTrue(cell.isForm("=2+3"), "A valid formula should pass validation");
+        assertFalse(cell.isForm("=2++3"), "An invalid formula should fail validation");
+        assertFalse(cell.isForm("=2+"), "A formula with a trailing operator should fail validation");
+        assertFalse(cell.isForm("=2*(3+4"), "A formula with unbalanced parentheses should fail validation");
+    }
 
-        SCell cell11 = new SCell("=A1*B2+C3"); // Formula with references
-        System.out.println("Data: " + cell11.getData()); // Expected: =A1*B2+C3
-        System.out.println("Type: " + cell11.getType()); // Expected: Ex2Utils.FORM
+    @Test
+    public void testComputeValidFormulas() {
+        SCell cell = new SCell("=2+3");
+        assertEquals(5.0, cell.computeForm("=2+3"), "The formula =2+3 should evaluate to 5.0");
+        cell.setData("=3*(2+4)");
+        assertEquals(18.0, cell.computeForm("=3*(2+4)"), "The formula =3*(2+4) should evaluate to 18.0");
+    }
+
+    @Test
+    public void testComputeInvalidFormula() {
+        SCell cell = new SCell("=2++2");
+        assertThrows(IllegalArgumentException.class, () -> cell.computeForm("=2++2"), "Invalid formulas should throw an exception");
+    }
+
+    @Test
+    public void testToString() {
+        SCell cell = new SCell("Hello");
+        assertEquals("Hello", cell.toString(), "The toString method should return the cell data");
     }
 }

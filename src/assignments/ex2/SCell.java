@@ -1,15 +1,11 @@
 package assignments.ex2;
 
 public class SCell implements Cell {
-    private String line; // Raw content of the cell.
-    private int type;    // Represents the type of the cell.
-    private int order;   // Represents the evaluation order.
+    private String line; // Contenu brut de la cellule
+    private int type;    // Type de la cellule (Ex2Utils.TEXT, Ex2Utils.NUMBER, Ex2Utils.FORM, etc.)
+    private int order;   // Ordre d'évaluation de la cellule
 
-    /**
-     * Constructor for SCell.
-     * Initializes the cell with the given string and determines its type.
-     * @param s Initial content of the cell.
-     */
+    // Constructeur
     public SCell(String s) {
         setData(s);
         this.order = 0;
@@ -51,19 +47,32 @@ public class SCell implements Cell {
         return getData();
     }
 
+    /**
+     * Détermine le type de la cellule (TEXT, NUMBER, FORM, ou erreur).
+     */
     private int parseType(String s) {
         if (s == null || s.isEmpty()) {
-            return Ex2Utils.TEXT;
+            return Ex2Utils.TEXT; // Une chaîne vide ou nulle est considérée comme du texte
         }
-        if (isForm(s)) {
-            return Ex2Utils.FORM;
+        if (s.startsWith("=")) {
+            // Vérifie si c'est une formule valide ou invalide
+            if (validateFormula(s.substring(1))) {
+                return Ex2Utils.FORM; // C'est une formule valide
+            } else {
+                return Ex2Utils.ERR_FORM_FORMAT; // Formule invalide
+            }
         }
         if (isNumber(s)) {
-            return Ex2Utils.NUMBER;
+            return Ex2Utils.NUMBER; // C'est un nombre valide
         }
-        return Ex2Utils.TEXT;
+        return Ex2Utils.TEXT; // Sinon, c'est du texte
     }
 
+
+
+    /**
+     * Vérifie si une chaîne est un nombre valide.
+     */
     public boolean isNumber(String text) {
         try {
             Double.parseDouble(text);
@@ -73,28 +82,61 @@ public class SCell implements Cell {
         }
     }
 
+    /**
+     * Vérifie si une chaîne est du texte.
+     */
+    public boolean isText(String text) {
+        return !isNumber(text) && !isForm(text);
+    }
+
+    /**
+     * Vérifie si une chaîne est une formule valide.
+     */
     public boolean isForm(String text) {
         return text != null && text.startsWith("=") && validateFormula(text.substring(1));
     }
 
+    /**
+     * Valide la syntaxe d'une formule.
+     */
     private boolean validateFormula(String formula) {
-        int balance = 0;
-        for (char c : formula.toCharArray()) {
+        int balance = 0; // Équilibre des parenthèses
+
+        for (int i = 0; i < formula.length(); i++) {
+            char c = formula.charAt(i);
+
+            // Vérifie l'équilibre des parenthèses
             if (c == '(') balance++;
-            else if (c == ')') balance--;
-            if (balance < 0) return false; // Closing parenthesis before an opening one.
+            if (c == ')') balance--;
+            if (balance < 0) return false; // Parenthèse fermante avant une ouvrante
+
+            // Vérifie les opérateurs consécutifs ou mal placés
+            if ("+-*/".indexOf(c) != -1) {
+                if (i == 0 || i == formula.length() - 1) return false; // Opérateur au début ou à la fin
+                if (i > 0 && "+-*/".indexOf(formula.charAt(i - 1)) != -1) return false; // Opérateurs consécutifs
+            }
         }
-        return balance == 0 && !formula.matches(".*[+\\-*/]{2,}.*");
+
+        return balance == 0; // Toutes les parenthèses doivent être fermées
     }
 
+
+
+    /**
+     * Calcule le résultat d'une formule valide.
+     */
     public Double computeForm(String form) {
-        if (!isForm(form)) {
+        if (!isForm(form) || !validateFormula(form.substring(1))) {
             throw new IllegalArgumentException("Invalid formula: " + form);
         }
         String expression = form.substring(1).trim();
         return evaluateMathExpression(expression);
     }
 
+
+    /**
+     * Évalue une expression mathématique.
+     */
     private Double evaluateMathExpression(String expression) {
         return new Object() {
             int pos = -1, ch;
@@ -121,7 +163,7 @@ public class SCell implements Cell {
 
             double parseExpression() {
                 double x = parseTerm();
-                for (; ; ) {
+                for (;;) {
                     if (eat('+')) x += parseTerm();
                     else if (eat('-')) x -= parseTerm();
                     else return x;
@@ -130,7 +172,7 @@ public class SCell implements Cell {
 
             double parseTerm() {
                 double x = parseFactor();
-                for (; ; ) {
+                for (;;) {
                     if (eat('*')) x *= parseFactor();
                     else if (eat('/')) x /= parseFactor();
                     else return x;
