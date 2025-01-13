@@ -155,7 +155,7 @@ Ex2/
 ## Screenshots
 
 ### GUI Overview
-![GUI Overview](images/tableau.png)
+![GUI Overview](path/to/gui-image.png)
 
 ---
 

@@ -1,4 +1,3 @@
-
 package assignments.ex2;
 
 import java.io.*;
@@ -52,18 +51,25 @@ public class Ex2Sheet implements Sheet {
     public Cell get(String cords) {
         if (cords == null || cords.length() < 2) return null;
 
-        char col = cords.charAt(0); // Extraire la colonne (par exemple 'A')
+        // Convertir la lettre de colonne en majuscule pour insensibilité à la casse
+        char col = Character.toUpperCase(cords.charAt(0));
         int row;
+
         try {
-            row = Integer.parseInt(cords.substring(1)); // Extraire la ligne
+            row = Integer.parseInt(cords.substring(1)); // Extraire l'indice de ligne
         } catch (NumberFormatException e) {
-            return null;
+            return null; // Retourne null si la référence est invalide
         }
 
-        int x = col - 'A'; // Convertir la lettre de la colonne en index
+        int x = col - 'A'; // Convertir la lettre de colonne en indice
         int y = row;
-        return get(x, y);
+
+        return get(x, y); // Appeler la méthode qui utilise les coordonnées numériques
     }
+
+
+
+
 
     @Override
     public int width() {
@@ -150,14 +156,13 @@ public class Ex2Sheet implements Sheet {
         if (c.getType() == Ex2Utils.FORM) {
             try {
                 String result = evaluateFormula(c.getData(), new HashSet<>());
-                c.setType(Ex2Utils.FORM); // Assure que le type reste FORM
-                return result;
+                return result; // Retourne le résultat sans changer le type de la cellule
             } catch (ArithmeticException e) {
                 c.setType(Ex2Utils.ERR_FORM_FORMAT);
                 return Ex2Utils.ERR_FORM; // Division par zéro ou autre erreur mathématique
             } catch (IllegalArgumentException e) {
                 c.setType(Ex2Utils.ERR_CYCLE_FORM);
-                return Ex2Utils.ERR_CYCLE; // Référence circulaire
+                return Ex2Utils.ERR_CYCLE; // Cellule vide ou référence circulaire
             } catch (Exception e) {
                 c.setType(Ex2Utils.ERR_FORM_FORMAT);
                 return Ex2Utils.ERR_FORM; // Autres erreurs de formule
@@ -165,6 +170,7 @@ public class Ex2Sheet implements Sheet {
         }
         return c.toString();
     }
+
 
 
     private String evaluateFormula(String formula, Set<String> visitedCells) {
@@ -307,18 +313,33 @@ public class Ex2Sheet implements Sheet {
             default -> throw new IllegalArgumentException("Unknown operator");
         };
     }
-
     private double getValueFromReference(String ref) {
-        Cell cell = get(ref);
-        if (cell == null || cell.getType() == Ex2Utils.ERR_FORM_FORMAT) {
+        ref = ref.toUpperCase(); // Normalisation déjà appliquée ici
+        Cell cell = get(ref);    // Appel à get(String cords)
+        if (cell == null) {
             throw new IllegalArgumentException("Invalid reference: " + ref);
         }
+
+        // Si la cellule contient une formule, évaluez-la
+        if (cell.getType() == Ex2Utils.FORM) {
+            String value = eval(ref.charAt(0) - 'A', Integer.parseInt(ref.substring(1)));
+            try {
+                return Double.parseDouble(value);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Non-numeric reference: " + ref);
+            }
+        }
+
+        // Si la cellule contient un nombre, retournez sa valeur
         try {
             return Double.parseDouble(cell.getData());
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Non-numeric reference: " + ref);
         }
     }
+
+
+
 
     private int calculateDepth(int x, int y, Set<String> visited) {
         String cellRef = (char) ('A' + x) + String.valueOf(y);
@@ -331,7 +352,7 @@ public class Ex2Sheet implements Sheet {
         String formula = c.getData().substring(1).trim();
         int maxDepth = 0;
 
-        for (String token : formula.split("[^A-Za-z0-9]") ) {
+        for (String token : formula.split("[^A-Za-z0-9]")) {
             if (token.matches("[A-Z]+[0-9]+")) {
                 Cell refCell = get(token);
                 if (refCell != null) {

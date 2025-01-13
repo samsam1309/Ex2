@@ -4,7 +4,7 @@ public class CellEntry implements Index2D {
 
     private int x, y;
 
-    // Constructeur qui permet d'initialiser x et y
+    // Constructor to initialize x and y coordinates
     public CellEntry(int x, int y) {
         this.x = x;
         this.y = y;
@@ -12,23 +12,23 @@ public class CellEntry implements Index2D {
 
     @Override
     public boolean isValid() {
-        // Exemple simple : retour vrai si x et y sont dans des limites acceptables
+        // Simple example: returns true if x and y are within valid limits
         return x >= 0 && x < Ex2Utils.WIDTH && y >= 0 && y < Ex2Utils.HEIGHT;
     }
 
     @Override
     public int getX() {
-        return this.x;  // Retourne l'index x
+        return this.x;  // Returns the x index
     }
 
     @Override
     public int getY() {
-        return this.y;  // Retourne l'index y
+        return this.y;  // Returns the y index
     }
 
     @Override
     public String toString() {
-
-        return Ex2Utils.ABC[x] + y;  // Affiche par exemple "A1" au lieu de "A16"
+        // Converts the cell coordinates to a spreadsheet-style format, e.g., "A1" instead of "A16"
+        return Ex2Utils.ABC[x] + y;
     }
 }

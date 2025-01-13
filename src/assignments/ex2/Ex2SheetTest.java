@@ -1,6 +1,7 @@
 package assignments.ex2;
 
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class Ex2SheetTest {
@@ -78,4 +79,42 @@ class Ex2SheetTest {
         assertEquals("246.0", loadedSheet.value(1, 1));
         assertEquals("Hello", loadedSheet.value(2, 2));
     }
+
+    @Test
+    void testGetCellByReference() {
+        Ex2Sheet sheet = new Ex2Sheet(3, 3);
+        sheet.set(0, 0, "10"); // A0
+        sheet.set(1, 0, "20"); // B0
+        sheet.set(2, 0, "=A0+B0"); // C0 = A0 + B0
+
+        // Vérifiez l'accès avec indices numériques
+        assertEquals("10", sheet.get(0, 0).getData());
+        assertEquals("20", sheet.get(1, 0).getData());
+        assertEquals("=A0+B0", sheet.get(2, 0).getData());
+
+        // Vérifiez l'accès avec références textuelles (insensibles à la casse)
+        assertEquals("10", sheet.get("A0").getData());
+        assertEquals("10", sheet.get("a0").getData()); // Doit aussi fonctionner en minuscule
+        assertEquals("20", sheet.get("B0").getData());
+        assertEquals("20", sheet.get("b0").getData());
+        assertEquals("=A0+B0", sheet.get("C0").getData());
+        assertEquals("=A0+B0", sheet.get("c0").getData());
+    }
+
+
+
+    @Test
+    void testReferencedFormulas() {
+        Ex2Sheet sheet = new Ex2Sheet(3, 3);
+
+        // Formule dans A1
+        sheet.set(0, 0, "=2+2"); // A1 = 4
+        assertEquals("4.0", sheet.value(0, 0));
+
+        // Formule dans B0 référant A1
+        sheet.set(1, 0, "=A0+5"); // B0 = A1 + 5 = 9
+        assertEquals("9.0", sheet.value(1, 0));
+    }
+
+
 }
